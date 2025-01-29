@@ -1,0 +1,177 @@
+const sqlite3 = require('sqlite3').verbose(),
+  bcrypt = require('bcrypt'),
+  Token = require('./token');
+
+const sqlite3Database = new sqlite3.Database('neushub.db');
+
+class User {
+  email = '';
+
+  constructor(email) {
+    this.email = email;
+    if (this.email.length < 1) {
+      throw new Error('email is empty');
+    } else if (!this.email.includes('@')) {
+      throw new Error('email is not valid');
+    }
+  }
+
+  async userCheck() {
+    return new Promise((resolve, reject) => {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.get(`
+          SELECT email
+          FROM user
+            WHERE email=?;
+        `, [this.email], (err, row) => {
+          if (err) {
+            reject(false);
+          } else {
+            resolve((row == undefined) ? false : true);
+          }
+        });
+      });
+    });
+  }
+
+  async passwordCheck(password) {
+    return new Promise((resolve, reject) => {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.get(`
+          SELECT email, password_hashed
+          FROM user
+            WHERE email=?;
+        `, [this.username], async (err, row) => {
+          if (err) {
+            reject('email or password error');
+          } else {
+            let equalPassword = await bcrypt.compare(password, row['password_hashed']);
+            resolve(equalPassword);
+          }
+        });
+      });
+    });
+  }
+
+  async signup(
+    full_name, // string
+    password,
+    created_at = (new Date()).toLocaleString('en-GB', {hour12: false}),
+    updated_at = (new Date()).toLocaleString('en-GB', {hour12: false}),
+    admin = 0,
+  ) {
+    return new Promise((resolve, reject) => {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.exec(`
+          INSERT INTO user (
+            email,
+            full_name,
+            password_hashed,
+            total_subscribers,
+            created_at,
+            updated_at,
+            admin
+          ) VALUES (
+            '${this.email}',
+            '${full_name}',
+            '${bcrypt.hashSync(password, 12)}',
+            '0',
+            '${(created_at == undefined || created_at == '') ? (new Date()).toLocaleString('en-GB', {hour12: false}) : created_at}',
+            '${(updated_at == undefined || updated_at == '') ? (new Date()).toLocaleString('en-GB', {hour12: false}) : updated_at}',
+            ${(admin == undefined) ? 0 : admin}
+          );
+        `, (err) => {
+          if (err == null) {
+            Token.deleteExpiredToken();
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+      });
+    });
+  }
+
+  async signIn(password) {
+    if (await this.passwordCheck(password)) {
+      let data = await new Promise((resolve, reject) => {
+        sqlite3Database.get(`
+          SELECT *
+          FROM person
+            WHERE username=?;
+        `, [this.username], (err, row) => {
+          resolve(row);
+        })
+      });
+      Token.deleteExpiredToken();
+      data['token'] = await Token.create(this.username);
+      return data;
+    } else {
+      return false;
+    }
+  }
+
+async delete(password) {
+if (await this.passwordCheck(password)) {
+  sqlite3Database.serialize(() => {
+    sqlite3Database.exec(`
+      DELETE FROM person
+        WHERE username='${this.username}';
+    `);
+  });
+  Token.deleteExpiredToken();
+  Token.deleteUser(this.username);
+  return true;
+} else {
+  return false; // password not match
+}
+}
+
+async edit(
+username,
+password,
+full_name,
+nick_name,
+email,
+phone,
+) {
+if (await this.passwordCheck(password)) {
+  let emailEqual = await new Promise((resolve, reject) => {
+    sqlite3Database.serialize(() => {
+      sqlite3Database.get(`
+        SELECT email
+        FROM person
+          WHERE email LIKE ?;
+      `, [email], (err, row) => {
+        if (row != undefined) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  });
+
+  sqlite3Database.serialize(() => {
+    sqlite3Database.exec(`
+      UPDATE person
+      SET ${(username == '' || username == undefined || username == null || username == this.username) ? '' : ('username=\'' + username + '\',')}
+          ${(full_name.length < 3 || username == undefined || username == null) ? '' : ('first_name=\'' + full_name[0][0].toUpperCase() + full_name[0].toLowerCase().slice(1) + '\',' + 'middle_name=\'' + full_name[1][0].toUpperCase() + full_name[1].toLowerCase().slice(1) + '\',' + 'last_name=\'' + full_name[2][0].toUpperCase() + full_name[2].toLowerCase().slice(1) + '\',')}
+          ${'nick_name=\'' + ((nick_name == undefined) ? '' : nick_name) + '\','}
+          ${(email == '' || email == undefined || email == null || emailEqual) ? '' : ('email=\'' + email + '\',')}
+          ${'phone=\'' + ((phone == undefined) ? '' : phone) + '\','}
+          ${'updated_at=\'' + (new Date()).toLocaleString('en-GB', {hour12: false}) + '\''}
+        WHERE username='${this.username}';    
+    `);
+  });
+
+  Token.editTokenUsername(this.username, username);
+  Token.deleteExpiredToken();
+  return true;
+} else {
+  return false;
+}
+}
+}
+
+module.exports = Person;
