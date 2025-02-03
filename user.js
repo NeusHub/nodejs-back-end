@@ -41,7 +41,7 @@ class User {
           SELECT email, password_hashed
           FROM user
             WHERE email=?;
-        `, [this.username], async (err, row) => {
+        `, [this.email], async (err, row) => {
           if (err) {
             reject('email or password error');
           } else {
@@ -97,81 +97,77 @@ class User {
       let data = await new Promise((resolve, reject) => {
         sqlite3Database.get(`
           SELECT *
-          FROM person
-            WHERE username=?;
-        `, [this.username], (err, row) => {
+          FROM user
+            WHERE email=?;
+        `, [this.email], (err, row) => {
           resolve(row);
         })
       });
       Token.deleteExpiredToken();
-      data['token'] = await Token.create(this.username);
+      data['token'] = await Token.create(this.email);
       return data;
     } else {
       return false;
     }
   }
 
-async delete(password) {
-if (await this.passwordCheck(password)) {
-  sqlite3Database.serialize(() => {
-    sqlite3Database.exec(`
-      DELETE FROM person
-        WHERE username='${this.username}';
-    `);
-  });
-  Token.deleteExpiredToken();
-  Token.deleteUser(this.username);
-  return true;
-} else {
-  return false; // password not match
-}
-}
-
-async edit(
-username,
-password,
-full_name,
-nick_name,
-email,
-phone,
-) {
-if (await this.passwordCheck(password)) {
-  let emailEqual = await new Promise((resolve, reject) => {
-    sqlite3Database.serialize(() => {
-      sqlite3Database.get(`
-        SELECT email
-        FROM person
-          WHERE email LIKE ?;
-      `, [email], (err, row) => {
-        if (row != undefined) {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
+  async delete(password) {
+    if (await this.passwordCheck(password)) {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.exec(`
+          DELETE FROM user
+            WHERE email='${this.email}';
+        `);
       });
-    });
-  });
+      Token.deleteExpiredToken();
+      Token.deleteUser(this.email);
+      return true;
+    } else {
+      return false; // password not match
+    }
+  }
 
-  sqlite3Database.serialize(() => {
-    sqlite3Database.exec(`
-      UPDATE person
-      SET ${(username == '' || username == undefined || username == null || username == this.username) ? '' : ('username=\'' + username + '\',')}
-          ${(full_name.length < 3 || username == undefined || username == null) ? '' : ('first_name=\'' + full_name[0][0].toUpperCase() + full_name[0].toLowerCase().slice(1) + '\',' + 'middle_name=\'' + full_name[1][0].toUpperCase() + full_name[1].toLowerCase().slice(1) + '\',' + 'last_name=\'' + full_name[2][0].toUpperCase() + full_name[2].toLowerCase().slice(1) + '\',')}
-          ${'nick_name=\'' + ((nick_name == undefined) ? '' : nick_name) + '\','}
-          ${(email == '' || email == undefined || email == null || emailEqual) ? '' : ('email=\'' + email + '\',')}
-          ${'phone=\'' + ((phone == undefined) ? '' : phone) + '\','}
-          ${'updated_at=\'' + (new Date()).toLocaleString('en-GB', {hour12: false}) + '\''}
-        WHERE username='${this.username}';    
-    `);
-  });
+  async edit(
+    email,
+    password,
+    full_name,
+  ) {
+    if (await this.passwordCheck(password)) {
+      let emailEqual = await new Promise((resolve, reject) => {
+        sqlite3Database.serialize(() => {
+          sqlite3Database.get(`
+            SELECT email
+            FROM user
+              WHERE email LIKE ?;
+          `, [email], (err, row) => {
+            if (row != undefined) {
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          });
+        });
+      });
 
-  Token.editTokenUsername(this.username, username);
-  Token.deleteExpiredToken();
-  return true;
-} else {
-  return false;
-}
-}
-}
+      sqlite3Database.serialize(() => {
+        sqlite3Database.exec(`
+          UPDATE user
+          SET ${(email == '' || email == undefined || email == null || email == this.email) ? '' : ('email=\'' + email + '\',')}
+              ${(full_name.length < 3 || full_name == undefined || full_name == null) ? '' : 'first_name=\'' + full_name.toUpperCase() + full_name.toLowerCase().slice(1) + '\','}
+              ${'nick_name=\'' + ((nick_name == undefined) ? '' : nick_name) + '\','}
+              ${(email == '' || email == undefined || email == null || emailEqual) ? '' : ('email=\'' + email + '\',')}
+              ${'updated_at=\'' + (new Date()).toLocaleString('en-GB', {hour12: false}) + '\''}
+            WHERE email='${this.email}';    
+        `);
+      });
 
-module.exports = Person;
+      Token.editTokenUsername(this.email, email);
+      Token.deleteExpiredToken();
+      return true;
+    } else {
+      return false;
+    }
+    }
+  }
+
+module.exports = User;

@@ -1,16 +1,17 @@
 const sqlite3 = require('sqlite3').verbose(),
       express = require('express'),
-      User = require('./user');
+      User = require('./user'),
+      Token = require('./token');
 
 const app = express(),
       sqlite3Database = new sqlite3.Database('neushub.db');
 
 app.use(express.json(), express.urlencoded({extended: true}));
-app.listen(8000);
+app.listen(80);
 
 app.get('/', (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  res.send({'status': 'connected'});
+  res.send([true]);
 })
 
 app.post('/signup', async (req, res, next) => {
@@ -20,11 +21,9 @@ app.post('/signup', async (req, res, next) => {
 
   if (!(await user.userCheck())) {
     signUp = await user.signup(
-      req.body['full_name'].split(' '),
       req.body['email'],
+      req.body['full_name'],
       password = req.body['password'],
-      nickname = req.body['nick_name'],
-      phone = req.body['phone'],
       created_at = req.body['created_at'],
       updated_at = req.body['updated_at'],
       admin = req.body['admin'],
@@ -37,11 +36,11 @@ app.post('/signup', async (req, res, next) => {
 
 app.post('/signin', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const person = new Person(req.body['username']);
+  const user = new User(req.body['email']);
   let signIn;
 
-  if (await person.userCheck()) {
-    signIn = await person.signIn(
+  if (await user.userCheck()) {
+    signIn = await user.signIn(
       password = req.body['password'],
     );
     res.send([(signIn != false) ? signIn : 'password not match']);
@@ -52,11 +51,11 @@ app.post('/signin', async (req, res, next) => {
 
 app.post('/deleteuser', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const person = new Person(req.body['username']);
+  const user = new User(req.body['email']);
   let deleteUser;
 
-  if (await person.userCheck()) {
-    deleteUser = await person.delete(req.body['password']);
+  if (await user.userCheck()) {
+    deleteUser = await user.delete(req.body['password']);
     res.send([(deleteUser) ? 'deleted' : 'password not match']);
   } else {
     res.send(['user not found']);
@@ -65,17 +64,14 @@ app.post('/deleteuser', async (req, res, next) => {
 
 app.post('/edituser', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const person = new Person(req.body['username']);
+  const user = new User(req.body['email']);
   let deleteUser;
 
-  if (await person.userCheck()) {
-    deleteUser = await person.edit(
-      username = req.body['edited_username'],
+  if (await user.userCheck()) {
+    deleteUser = await user.edit(
+      email = req.body['edited_email'],
       password = req.body['password'],
-      full_name = req.body['full_name'].split(' '),
-      nick_name = req.body['nick_name'],
-      email = req.body['email'],
-      phone = req.body['phone'],
+      full_name = req.body['full_name'],
     );
     res.send([(deleteUser) ? 'edited' : 'password not match']);
   } else {
@@ -92,7 +88,19 @@ sqlite3Database.serialize(() => {
       title CHAR(255) NOT NULL,
       image_path CHAR(255) NOT NULL,
       description TEXT(2048),
-      FOREIGN KEY (user_email) REFERENCES user(username),
+      user_email CHAR(128) NOT NULL,
+      FOREIGN KEY (user_email) REFERENCES user(email),
+      CHECK (user_email LIKE '%@%.%')
+    );
+    CREATE TABLE IF NOT EXISTS post_rating (
+      id INT (255) PRIMARY KEY UNIQUE NOT NULL,
+      description TEXT(2048),
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      user_email CHAR(128) NOT NULL,
+      post_id INT(255) NOT NULL,
+      FOREIGN KEY (user_email) REFERENCES user(email),
+      FOREIGN KEY (post_id) REFERENCES post(id),
       CHECK (user_email LIKE '%@%.%')
     );
     CREATE TABLE IF NOT EXISTS user (
@@ -124,8 +132,10 @@ sqlite3Database.serialize(() => {
       FOREIGN KEY (user_email) REFERENCES user(email),
       FOREIGN KEY (user_email_subscribed) REFERENCES user(email)
     );
-    )
     CREATE INDEX IF NOT EXISTS post_id ON post (
+      id
+    );
+    CREATE INDEX IF NOT EXISTS post_rating_id ON post_rating (
       id
     );
     CREATE INDEX IF NOT EXISTS user_email ON user (
@@ -137,6 +147,5 @@ sqlite3Database.serialize(() => {
     CREATE INDEX IF NOT EXISTS subscribe_id ON subscribe (
       id
     );
-    )
   `);
 });
