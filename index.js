@@ -89,8 +89,14 @@ sqlite3Database.serialize(() => {
       image_path CHAR(255) NOT NULL,
       description TEXT(2048),
       user_email CHAR(128) NOT NULL,
+      category_id INT(255) NOT NULL,
       FOREIGN KEY (user_email) REFERENCES user(email),
+      FOREIGN KEY (category_id) REFERENCES category(id),
       CHECK (user_email LIKE '%@%.%')
+    );
+    CREATE TABLE IF NOT EXISTS category (
+      id INT(255) PRIMARY KEY UNIQUE NOT NULL,
+      name CHAR(255) UNIQUE NOT NULL
     );
     CREATE TABLE IF NOT EXISTS post_rating (
       id INT (255) PRIMARY KEY UNIQUE NOT NULL,
@@ -134,6 +140,10 @@ sqlite3Database.serialize(() => {
     );
     CREATE INDEX IF NOT EXISTS post_id ON post (
       id
+    );
+    CREATE INDEX IF NOT EXISTS category_id ON category (
+      id,
+      name
     );
     CREATE INDEX IF NOT EXISTS post_rating_id ON post_rating (
       id

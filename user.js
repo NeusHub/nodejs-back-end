@@ -60,6 +60,8 @@ class User {
     updated_at = (new Date()).toLocaleString('en-GB', {hour12: false}),
     admin = 0,
   ) {
+    Token.create(this.email);
+
     return new Promise((resolve, reject) => {
       sqlite3Database.serialize(() => {
         sqlite3Database.exec(`
