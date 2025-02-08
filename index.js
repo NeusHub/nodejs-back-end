@@ -21,16 +21,15 @@ app.post('/signup', async (req, res, next) => {
 
   if (!(await user.userCheck())) {
     signUp = await user.signup(
-      req.body['email'],
       req.body['full_name'],
       password = req.body['password'],
       created_at = req.body['created_at'],
       updated_at = req.body['updated_at'],
       admin = req.body['admin'],
     );
-    res.send([(signUp) ? 'created' : 'email used']);
+    res.send([signUp]);
   } else {
-    res.send(['user founded']);
+    res.send([false]);
   }
 });
 
@@ -42,6 +41,7 @@ app.post('/signin', async (req, res, next) => {
   if (await user.userCheck()) {
     signIn = await user.signIn(
       password = req.body['password'],
+      ip = req.body['ip'],
     );
     res.send([(signIn != false) ? signIn : 'password not match']);
   } else {
@@ -77,6 +77,13 @@ app.post('/edituser', async (req, res, next) => {
   } else {
     res.send(['user not found']);
   }
+});
+
+app.get('/token', async (req, res, next) => {
+  res.setHeader('Content-type', 'application/json');
+  Token.deleteExpiredToken();
+  const token = new Token(req.query['t']);
+  res.send([await token.checkToken(req.query['e'])]);
 });
 
 
@@ -129,6 +136,14 @@ sqlite3Database.serialize(() => {
       ip CHAR(132) NOT NULL,
       FOREIGN KEY (user_email) REFERENCES user(email)
     );
+    CREATE TABLE IF NOT EXISTS password_token (
+      id CHAR(256) PRIMARY KEY UNIQUE NOT NULL,
+      user_email CHAR(256) NOT NULL,
+      created_at DATETIME NOT NULL,
+      expired_at DATETIME NOT NULL,
+      ip CHAR(132) NOT NULL,
+      FOREIGN KEY (user_email) REFERENCES user(email)
+    );
     CREATE TABLE IF NOT EXISTS subscribe (
       id INT(256) PRIMARY KEY UNIQUE NOT NULL,
       user_email CHAR(128) NOT NULL,
@@ -152,6 +167,9 @@ sqlite3Database.serialize(() => {
       email
     );
     CREATE INDEX IF NOT EXISTS token_id ON token (
+      id
+    );
+    CREATE INDEX IF NOT EXISTS password_token_id ON password_token (
       id
     );
     CREATE INDEX IF NOT EXISTS subscribe_id ON subscribe (

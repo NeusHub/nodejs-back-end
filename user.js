@@ -56,12 +56,10 @@ class User {
   async signup(
     full_name, // string
     password,
-    created_at = (new Date()).toLocaleString('en-GB', {hour12: false}),
-    updated_at = (new Date()).toLocaleString('en-GB', {hour12: false}),
+    created_at = (new Date()).toLocaleString('en-GB'),
+    updated_at = (new Date()).toLocaleString('en-GB'),
     admin = 0,
   ) {
-    Token.create(this.email);
-
     return new Promise((resolve, reject) => {
       sqlite3Database.serialize(() => {
         sqlite3Database.exec(`
@@ -78,8 +76,8 @@ class User {
             '${full_name}',
             '${bcrypt.hashSync(password, 12)}',
             '0',
-            '${(created_at == undefined || created_at == '') ? (new Date()).toLocaleString('en-GB', {hour12: false}) : created_at}',
-            '${(updated_at == undefined || updated_at == '') ? (new Date()).toLocaleString('en-GB', {hour12: false}) : updated_at}',
+            '${(created_at == undefined || created_at == '') ? (new Date()).toLocaleString('en-GB') : created_at}',
+            '${(updated_at == undefined || updated_at == '') ? (new Date()).toLocaleString('en-GB') : updated_at}',
             ${(admin == undefined) ? 0 : admin}
           );
         `, (err) => {
@@ -94,7 +92,7 @@ class User {
     });
   }
 
-  async signIn(password) {
+  async signIn(password, ip = '127.0.0.1') {
     if (await this.passwordCheck(password)) {
       let data = await new Promise((resolve, reject) => {
         sqlite3Database.get(`
@@ -106,7 +104,7 @@ class User {
         })
       });
       Token.deleteExpiredToken();
-      data['token'] = await Token.create(this.email);
+      data['token'] = await Token.create(this.email, ip);
       return data;
     } else {
       return false;
@@ -155,15 +153,14 @@ class User {
         sqlite3Database.exec(`
           UPDATE user
           SET ${(email == '' || email == undefined || email == null || email == this.email) ? '' : ('email=\'' + email + '\',')}
-              ${(full_name.length < 3 || full_name == undefined || full_name == null) ? '' : 'first_name=\'' + full_name.toUpperCase() + full_name.toLowerCase().slice(1) + '\','}
-              ${'nick_name=\'' + ((nick_name == undefined) ? '' : nick_name) + '\','}
+              ${(full_name == undefined || full_name == null) ? '' : 'full_name=\'' + full_name + '\','}
               ${(email == '' || email == undefined || email == null || emailEqual) ? '' : ('email=\'' + email + '\',')}
-              ${'updated_at=\'' + (new Date()).toLocaleString('en-GB', {hour12: false}) + '\''}
+              ${'updated_at=\'' + (new Date()).toLocaleString('en-GB') + '\''}
             WHERE email='${this.email}';    
         `);
       });
 
-      Token.editTokenUsername(this.email, email);
+      Token.editTokenEmail(this.email, email);
       Token.deleteExpiredToken();
       return true;
     } else {

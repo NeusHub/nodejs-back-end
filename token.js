@@ -21,17 +21,17 @@ class Token {
   }
 
   static deleteExpiredToken() {
-    let currentDatetime = (new Date()).toLocaleString('en-GB', {hour12: false});
+    let currentDatetime = (new Date()).toLocaleString('en-GB');
     sqlite3Database.serialize(() => {
       sqlite3Database.exec(`
         DELETE FROM token
-        WHERE expired_at < '${currentDatetime}';
+        WHERE expired_at <= '${currentDatetime}';
       `);
     });
   }
 
-  static editTokenUsername(email, newEmail) {
-    let currentDatetime = (new Date()).toLocaleString('en-GB', {hour12: false});
+  static editTokenEmail(email, newEmail) {
+    let currentDatetime = (new Date()).toLocaleString('en-GB');
 
     sqlite3Database.serialize(() => {
       sqlite3Database.exec(`
@@ -63,7 +63,8 @@ class Token {
 
     sqlite3Database.serialize(() => {
       let currentDatetime = new Date(),
-          expiredDatetime = addMonth(currentDatetime);
+          expiredDatetime = addMonth(new Date());
+
       sqlite3Database.exec(`
         INSERT INTO token (
           id,
@@ -74,13 +75,30 @@ class Token {
         ) VALUES (
           '${newToken}',
           '${email}',
-          '${currentDatetime.toLocaleString('en-GB', {hour12: false})}',
-          '${expiredDatetime.toLocaleString('en-GB', {hour12: false})}',
-          '${ip}'
+          '${currentDatetime.toLocaleString('en-GB')}',
+          '${expiredDatetime.toLocaleString('en-GB')}',
+          '${(ip == null || ip == undefined || ip == '') ? '127.0.0.1' : ip}'
         );
       `);
     });
     return newToken;
+  }
+
+  async checkToken(email) {
+    return await new Promise((resolve, reject) => {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.get(`
+          SELECT id FROM token
+          WHERE id LIKE '${this.token}' AND user_email LIKE'${email}';
+        `, (err, row) => {
+          if (err != null) {
+            resolve(false);
+          } else {
+            resolve(row != undefined);
+          }
+        });
+      });
+    });
   }
 }
 
@@ -89,12 +107,13 @@ function tokenGenerator(length) {
   randomNumbers.map((value, index) => {
     randomNumbers[index] = String.fromCharCode(((Math.random() * 94) + 32).toFixed(0));
   });
-  return randomNumbers.join('').replaceAll('\'', '1');
+  return randomNumbers.join('').replaceAll('\'', '1').replaceAll('"', '2').replaceAll('&', '3').replaceAll('=', '4').replaceAll('#', '5').replaceAll('\\', '6');
 }
 
-function addMonth(currentDate) {
-  currentDate.setMonth(currentDate.getMonth() + 1);
-  return currentDate.toLocaleString('en-GB', { hour12: false });
+function addMonth(currentDatetime) {
+  currentDatetime.setMonth(currentDatetime.getMonth() + 1);
+
+  return currentDatetime;
 }
 
 module.exports = Token;
