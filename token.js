@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose(),
       bcrypt = require('bcrypt'),
-      crypto = require('crypto');
+      crypto = require('crypto'),
+      User = require('./user');
 
 const sqlite3Database = new sqlite3.Database('neushub.db');
 
@@ -85,6 +86,8 @@ class Token {
   }
 
   async checkToken(email) {
+    let expiredDatetime = addMonth(new Date()).toLocaleString('en-GB');
+
     return await new Promise((resolve, reject) => {
       sqlite3Database.serialize(() => {
         sqlite3Database.get(`
@@ -94,9 +97,14 @@ class Token {
           if (err != null) {
             resolve(false);
           } else {
-            resolve(row != undefined);
+            resolve(true);
           }
         });
+        sqlite3Database.exec(`
+          UPDATE token
+          SET expired_at='${expiredDatetime}'
+          WHERE id LIKE '${this.token}';
+        `);
       });
     });
   }

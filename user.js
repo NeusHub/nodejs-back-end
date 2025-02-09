@@ -111,6 +111,18 @@ class User {
     }
   }
 
+  static async getData(email) {
+    return await new Promise((resolve, reject) => {
+      sqlite3Database.get(`
+        SELECT *
+        FROM user
+          WHERE email=?;
+      `, [email], (err, row) => {
+        resolve(row);
+      })
+    });
+  }
+
   async delete(password) {
     if (await this.passwordCheck(password)) {
       sqlite3Database.serialize(() => {
