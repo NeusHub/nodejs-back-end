@@ -16,12 +16,12 @@ app.get('/', (req, res, next) => {
 
 app.post('/signup', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const user = new User(req.body['email']);
+  const user = new User(req.body['email'].toLowerCase());
   let signUp;
 
   if (!(await user.userCheck())) {
     signUp = await user.signup(
-      req.body['full_name'],
+      req.body['full_name'].toLowerCase(),
       password = req.body['password'],
       created_at = req.body['created_at'],
       updated_at = req.body['updated_at'],
@@ -35,7 +35,7 @@ app.post('/signup', async (req, res, next) => {
 
 app.post('/signin', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const user = new User(req.body['email']);
+  const user = new User(req.body['email'].toLowerCase());
   let signIn;
 
   if (await user.userCheck()) {
@@ -51,7 +51,7 @@ app.post('/signin', async (req, res, next) => {
 
 app.post('/deleteuser', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const user = new User(req.body['email']);
+  const user = new User(req.body['email'].toLowerCase());
   let deleteUser;
 
   if (await user.userCheck()) {
@@ -64,14 +64,14 @@ app.post('/deleteuser', async (req, res, next) => {
 
 app.post('/edituser', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
-  const user = new User(req.body['email']);
+  const user = new User(req.body['email'].toLowerCase());
   let deleteUser;
 
   if (await user.userCheck()) {
     deleteUser = await user.edit(
-      email = req.body['edited_email'],
+      email = req.body['edited_email'].toLowerCase(),
       password = req.body['password'],
-      full_name = req.body['full_name'],
+      full_name = req.body['full_name'].toLowerCase(),
     );
     res.send([(deleteUser) ? 'edited' : 'password not match']);
   } else {
@@ -83,11 +83,19 @@ app.get('/token', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
   Token.deleteExpiredToken();
   const token = new Token(req.query['t']);
-  res.send([await token.checkToken(req.query['e'])]);
+  const user_data = await User.getData(req.query['e'].toLowerCase());
+  if (req.query['e'].toLowerCase() == '' || req.query['q'] == '') {
+    res.send([false]);
+  } else {
+    res.send([await token.checkToken(req.query['e'].toLowerCase()), user_data]);
+  }
 });
 
 
 sqlite3Database.serialize(() => {
+  sqlite3Database.exec(`
+    
+  `);
   sqlite3Database.exec(`
     CREATE TABLE IF NOT EXISTS post (
       id INT(255) PRIMARY KEY UNIQUE NOT NULL,

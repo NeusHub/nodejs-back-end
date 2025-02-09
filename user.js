@@ -114,7 +114,7 @@ class User {
   static async getData(email) {
     return await new Promise((resolve, reject) => {
       sqlite3Database.get(`
-        SELECT *
+        SELECT email, full_name, total_subscribers, last_post_id, created_at, updated_at
         FROM user
           WHERE email=?;
       `, [email], (err, row) => {
