@@ -1,12 +1,17 @@
 const sqlite3 = require('sqlite3').verbose(),
       express = require('express'),
+      cors = require('cors'),
+      path = require('path'),
       User = require('./user'),
-      Token = require('./token');
+      Token = require('./token'),
+      Post = require('./post');
 
 const app = express(),
       sqlite3Database = new sqlite3.Database('neushub.db');
+const imagesDir = path.join(__dirname, 'post_images');
 
-app.use(express.json(), express.urlencoded({extended: true}));
+app.use(express.json(), cors(), express.urlencoded({extended: true}));
+app.use('/images', express.static(imagesDir));
 app.listen(80);
 
 app.get('/', (req, res, next) => {
@@ -84,37 +89,116 @@ app.get('/token', async (req, res, next) => {
   Token.deleteExpiredToken();
   const token = new Token(req.query['t']);
   const user_data = await User.getData(req.query['e'].toLowerCase());
+  const token_check = await token.checkToken(req.query['e'].toLowerCase());
+
   if (req.query['e'].toLowerCase() == '' || req.query['q'] == '') {
     res.send([false]);
   } else {
-    res.send([await token.checkToken(req.query['e'].toLowerCase()), user_data]);
+    if (token_check)
+      res.send([await token.checkToken(req.query['e'].toLowerCase()), user_data]);
+    else
+      res.send([false]);
   }
 });
 
+app.get('/posts', async (req, res, next) => {
+  res.setHeader('Content-type', 'application/json');
+  res.send([await Post.allPosts(await Post.allCategories())]);
+});
+
+app.get('/userdata', async (req, res, next) => {
+  res.setHeader('Content-type', 'application/json');
+  try {
+    const user_data = await User.getData(req.query['email'].toLowerCase());
+    res.send([user_data]);
+  } catch (e) {
+    res.send([false]);
+  }
+});
+
+app.get('/subscribe', async (req, res, next) => {
+  res.setHeader('Content-type', 'application/json');
+  try {
+    if (await new Token(req.query['t']).checkToken(req.query['e']) != false) {
+      if (await new User(req.query['e']).subscribed(req.query['other_user']) == false) {
+          total = await new User(req.query['e']).getTotalSubscribers();
+          await new User(req.query['e']).addSubscriber(total, req.query['other_user']);
+      } else {
+        throw Error();
+      }
+    }
+    res.send([true]);
+  } catch (e) {
+    res.send([false]);
+  }
+});
+
+// new Post(
+//   'How to earn money',
+//   '0_3.jpg',
+//   'abdelrahman@neushub.com',
+//   'designing',
+//   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
+//   new Date(),
+// );
+
+// new Post(
+//   'How to earn money',
+//   '0_3.jpg',
+//   'youssef@neushub.com',
+//   'programming',
+//   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
+//   new Date(),
+// );
 
 sqlite3Database.serialize(() => {
-  sqlite3Database.exec(`
-    
-  `);
+  // sqlite3Database.exec(`
+  //   INSERT INTO category (
+  //     name
+  //   ) VALUES (
+  //     'finance'
+  //   );
+  //   INSERT INTO category (
+  //     name
+  //   ) VALUES (
+  //     'marketing'
+  //   );
+  //   INSERT INTO category (
+  //     name
+  //   ) VALUES (
+  //     'programming'
+  //   );
+  //   INSERT INTO category (
+  //     name
+  //   ) VALUES (
+  //     'designing'
+  //   );
+  //   INSERT INTO category (
+  //     name
+  //   ) VALUES (
+  //     'crypto'
+  //   );
+  // `);
   sqlite3Database.exec(`
     CREATE TABLE IF NOT EXISTS post (
-      id INT(255) PRIMARY KEY UNIQUE NOT NULL,
-      datetime DATETIME NOT NULL,
+      id INTEGER PRIMARY KEY,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
       title CHAR(255) NOT NULL,
       image_path CHAR(255) NOT NULL,
       description TEXT(2048),
       user_email CHAR(128) NOT NULL,
-      category_id INT(255) NOT NULL,
+      category_name CHAR(255) NOT NULL,
       FOREIGN KEY (user_email) REFERENCES user(email),
-      FOREIGN KEY (category_id) REFERENCES category(id),
+      FOREIGN KEY (category_name) REFERENCES category(name),
       CHECK (user_email LIKE '%@%.%')
     );
     CREATE TABLE IF NOT EXISTS category (
-      id INT(255) PRIMARY KEY UNIQUE NOT NULL,
+      id INTEGER PRIMARY KEY,
       name CHAR(255) UNIQUE NOT NULL
     );
     CREATE TABLE IF NOT EXISTS post_rating (
-      id INT (255) PRIMARY KEY UNIQUE NOT NULL,
+      id INTEGER PRIMARY KEY,
       description TEXT(2048),
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL,
@@ -153,7 +237,7 @@ sqlite3Database.serialize(() => {
       FOREIGN KEY (user_email) REFERENCES user(email)
     );
     CREATE TABLE IF NOT EXISTS subscribe (
-      id INT(256) PRIMARY KEY UNIQUE NOT NULL,
+      id INTEGER PRIMARY KEY,
       user_email CHAR(128) NOT NULL,
       user_email_subscribed CHAR(128) NOT NULL,
       created_at DATETIME NOT NULL,

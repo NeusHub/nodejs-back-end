@@ -97,7 +97,11 @@ class Token {
           if (err != null) {
             resolve(false);
           } else {
-            resolve(true);
+            if (row == undefined) {
+              resolve(false);
+            } else {
+              resolve(row);
+            }
           }
         });
         sqlite3Database.exec(`
@@ -115,7 +119,7 @@ function tokenGenerator(length) {
   randomNumbers.map((value, index) => {
     randomNumbers[index] = String.fromCharCode(((Math.random() * 94) + 32).toFixed(0));
   });
-  return randomNumbers.join('').replaceAll('\'', '1').replaceAll('"', '2').replaceAll('&', '3').replaceAll('=', '4').replaceAll('#', '5').replaceAll('\\', '6');
+  return randomNumbers.join('').replaceAll('\'', '1').replaceAll('"', '2').replaceAll('&', '3').replaceAll('=', '4').replaceAll('#', '5').replaceAll('\\', '6').replace('+', '7');
 }
 
 function addMonth(currentDatetime) {

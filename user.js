@@ -139,6 +139,70 @@ class User {
     }
   }
 
+  async getTotalSubscribers() {
+    return new Promise((resolve, reject) => {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.get(`
+          SELECT email, total_subscribers
+          FROM user
+          WHERE email LIKE '${this.email.toLowerCase()}';
+        `, (err, row) => {
+          if (err == null && row != undefined) {
+            resolve(row['total_subscribers']);
+          } else {
+            resolve(false);
+          }
+        });
+      });
+    });
+  }
+
+  async subscribed(other_user) {
+    return new Promise((resolve, reject) => {
+      sqlite3Database.serialize(() => {
+        sqlite3Database.get(`
+          SELECT user_email, user_email_subscribed
+          FROM subscribe
+          WHERE user_email='${this.email}' AND user_email_subscribed='${other_user}';
+        `, (err, row) => {
+          if (err == null && row != undefined) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+      });
+    });
+  }
+
+  async addSubscriber(total, other_user) {
+    return new Promise((resolve, reject) => {
+      let currentDatetime = new Date().getTime();
+      sqlite3Database.serialize(() => {
+        sqlite3Database.exec(`
+          UPDATE user
+          SET total_subscribers=${total + 1}
+          WHERE email LIKE '${other_user}';
+          INSERT INTO subscribe (
+            user_email,
+            user_email_subscribed,
+            created_at,
+            updated_at
+          ) VALUES (
+            '${this.email.toLowerCase()}',
+            '${other_user.toLowerCase()}',
+            ${currentDatetime},
+            ${currentDatetime}
+          );
+        `, (err) => {
+          if (err != null) {
+            reject(err);
+          }
+        });
+      });
+    });
+  }
+
   async edit(
     email,
     password,
