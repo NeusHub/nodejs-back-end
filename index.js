@@ -14,7 +14,12 @@ app.use(express.json(), cors(), express.urlencoded({extended: true}));
 app.use('/images', express.static(imagesDir));
 app.listen(80);
 
-app.get('/', (req, res, next) => {
+app.get('/', async (req, res, next) => {
+//   await new User('jo@n.co').signup('Youssef Hassan', 'Data#2000');
+// await new User('ali@n.co').signup('Ali Hassan', 'Data#2000');
+// await new User('mo@n.co').signup('Mohamed Hassan', 'Data#2000');
+// await new User('hassan@n.co').signup('Hassan Ali', 'Data#2000');
+// await new User('bob@n.co').signup('Abdelrahman Ahmed', 'Data#2000');
   res.setHeader('Content-type', 'application/json');
   res.send([true]);
 })
@@ -119,15 +124,39 @@ app.get('/userdata', async (req, res, next) => {
 app.get('/subscribe', async (req, res, next) => {
   res.setHeader('Content-type', 'application/json');
   try {
-    if (await new Token(req.query['t']).checkToken(req.query['e']) != false) {
-      if (await new User(req.query['e']).subscribed(req.query['other_user']) == false) {
-          total = await new User(req.query['e']).getTotalSubscribers();
-          await new User(req.query['e']).addSubscriber(total, req.query['other_user']);
+    const token = new Token(req.query['t']);
+    const user = new User(req.query['e']);
+    if (await token.checkToken(req.query['e']) != false) {
+      if (await user.subscribed(req.query['other_user']) == false) {
+        let total_subscribers = await User.getTotalSubscribers(req.query['other_user']);
+        await user.addSubscriber(total_subscribers, req.query['other_user']);
+        console.log('hbghjg');
+        res.send(['subscribe']);
       } else {
-        throw Error();
-      }
-    }
-    res.send([true]);
+        res.send(['subscribed']);
+      };
+    } else {
+      res.send([false]);
+    };
+  } catch (e) {
+    res.send([false]);
+  }
+});
+
+app.get('/subscribed', async (req, res, next) => {
+  res.setHeader('Content-type', 'application/json');
+  try {
+    const token = new Token(req.query['t']);
+    const user = new User(req.query['e']);
+    if (await token.checkToken(req.query['e']) != false) {
+      if (await user.subscribed(req.query['other_user']) == false) {
+        res.send(['subscribe']);
+      } else {
+        res.send(['subscribed']);
+      };
+    } else {
+      res.send([false]);
+    };
   } catch (e) {
     res.send([false]);
   }
@@ -135,18 +164,41 @@ app.get('/subscribe', async (req, res, next) => {
 
 // new Post(
 //   'How to earn money',
+//   '0_0.jpg',
+//   'jo@n.co',
+//   'finance',
+//   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
+//   new Date(),
+// );
+// new Post(
+//   'How to earn money',
+//   '0_1.jpg',
+//   'ali@n.co',
+//   'marketing',
+//   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
+//   new Date(),
+// );
+// new Post(
+//   'How to earn money',
+//   '0_2.jpg',
+//   'mo@n.co',
+//   'programming',
+//   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
+//   new Date(),
+// );
+// new Post(
+//   'How to earn money',
 //   '0_3.jpg',
-//   'abdelrahman@neushub.com',
+//   'bob@n.co',
 //   'designing',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
 //   new Date(),
 // );
-
 // new Post(
 //   'How to earn money',
-//   '0_3.jpg',
-//   'youssef@neushub.com',
-//   'programming',
+//   '0_4.jpg',
+//   'hassan@n.co',
+//   'crypto',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
 //   new Date(),
 // );

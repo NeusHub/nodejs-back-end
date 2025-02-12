@@ -56,8 +56,8 @@ class User {
   async signup(
     full_name, // string
     password,
-    created_at = (new Date()).toLocaleString('en-GB'),
-    updated_at = (new Date()).toLocaleString('en-GB'),
+    created_at = (new Date()).getTime(),
+    updated_at = (new Date()).getTime(),
     admin = 0,
   ) {
     return new Promise((resolve, reject) => {
@@ -76,8 +76,8 @@ class User {
             '${full_name}',
             '${bcrypt.hashSync(password, 12)}',
             '0',
-            '${(created_at == undefined || created_at == '') ? (new Date()).toLocaleString('en-GB') : created_at}',
-            '${(updated_at == undefined || updated_at == '') ? (new Date()).toLocaleString('en-GB') : updated_at}',
+            '${(created_at == undefined || created_at == '') ? (new Date()).getTime() : created_at}',
+            '${(updated_at == undefined || updated_at == '') ? (new Date()).getTime() : updated_at}',
             ${(admin == undefined) ? 0 : admin}
           );
         `, (err) => {
@@ -118,7 +118,11 @@ class User {
         FROM user
           WHERE email=?;
       `, [email], (err, row) => {
-        resolve(row);
+        if (err == null && row != undefined) {
+          resolve(row);
+        } else {
+          resolve(false);
+        }
       })
     });
   }
@@ -139,13 +143,13 @@ class User {
     }
   }
 
-  async getTotalSubscribers() {
+  static async getTotalSubscribers(other_user) {
     return new Promise((resolve, reject) => {
       sqlite3Database.serialize(() => {
         sqlite3Database.get(`
           SELECT email, total_subscribers
           FROM user
-          WHERE email LIKE '${this.email.toLowerCase()}';
+          WHERE email LIKE '${other_user}';
         `, (err, row) => {
           if (err == null && row != undefined) {
             resolve(row['total_subscribers']);
@@ -163,10 +167,10 @@ class User {
         sqlite3Database.get(`
           SELECT user_email, user_email_subscribed
           FROM subscribe
-          WHERE user_email='${this.email}' AND user_email_subscribed='${other_user}';
+          WHERE user_email LIKE '${this.email}' AND user_email_subscribed LIKE '${other_user}';
         `, (err, row) => {
           if (err == null && row != undefined) {
-            resolve(true);
+            resolve(row);
           } else {
             resolve(false);
           }
@@ -175,14 +179,14 @@ class User {
     });
   }
 
-  async addSubscriber(total, other_user) {
+  async addSubscriber(total_subscribers, other_user) {
     return new Promise((resolve, reject) => {
       let currentDatetime = new Date().getTime();
       sqlite3Database.serialize(() => {
         sqlite3Database.exec(`
           UPDATE user
-          SET total_subscribers=${total + 1}
-          WHERE email LIKE '${other_user}';
+          SET total_subscribers=${total_subscribers + 1}
+          WHERE email LIKE '${other_user.toLowerCase()}';
           INSERT INTO subscribe (
             user_email,
             user_email_subscribed,
@@ -197,6 +201,8 @@ class User {
         `, (err) => {
           if (err != null) {
             reject(err);
+          } else {
+            resolve(true);
           }
         });
       });

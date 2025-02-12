@@ -22,7 +22,7 @@ class Token {
   }
 
   static deleteExpiredToken() {
-    let currentDatetime = (new Date()).toLocaleString('en-GB');
+    let currentDatetime = (new Date()).getTime();
     sqlite3Database.serialize(() => {
       sqlite3Database.exec(`
         DELETE FROM token
@@ -32,7 +32,7 @@ class Token {
   }
 
   static editTokenEmail(email, newEmail) {
-    let currentDatetime = (new Date()).toLocaleString('en-GB');
+    let currentDatetime = (new Date()).getTime();
 
     sqlite3Database.serialize(() => {
       sqlite3Database.exec(`
@@ -76,8 +76,8 @@ class Token {
         ) VALUES (
           '${newToken}',
           '${email}',
-          '${currentDatetime.toLocaleString('en-GB')}',
-          '${expiredDatetime.toLocaleString('en-GB')}',
+          '${currentDatetime.getTime()}',
+          '${expiredDatetime.getTime()}',
           '${(ip == null || ip == undefined || ip == '') ? '127.0.0.1' : ip}'
         );
       `);
@@ -86,7 +86,7 @@ class Token {
   }
 
   async checkToken(email) {
-    let expiredDatetime = addMonth(new Date()).toLocaleString('en-GB');
+    let expiredDatetime = addMonth(new Date()).getTime();
 
     return await new Promise((resolve, reject) => {
       sqlite3Database.serialize(() => {
@@ -122,7 +122,7 @@ function tokenGenerator(length) {
   return randomNumbers.join('').replaceAll('\'', '1').replaceAll('"', '2').replaceAll('&', '3').replaceAll('=', '4').replaceAll('#', '5').replaceAll('\\', '6').replace('+', '7');
 }
 
-function addMonth(currentDatetime) {
+function addMonth(currentDatetime = new Date()) {
   currentDatetime.setMonth(currentDatetime.getMonth() + 1);
 
   return currentDatetime;
