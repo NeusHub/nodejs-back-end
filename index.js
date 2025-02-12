@@ -12,6 +12,7 @@ const imagesDir = path.join(__dirname, 'post_images');
 
 app.use(express.json(), cors(), express.urlencoded({extended: true}));
 app.use('/images', express.static(imagesDir));
+app.listen(8000);
 
 app.get('/', async (req, res, next) => {
 //   await new User('jo@n.co').signup('Youssef Hassan', 'Data#2000');
