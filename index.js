@@ -162,9 +162,10 @@ app.get('/subscribed', async (req, res, next) => {
   }
 });
 
+// for (let i = 0; i < 5; i++) {
 // new Post(
 //   'How to earn money',
-//   '0_0.jpg',
+//   `0_${i}.jpg`,
 //   'jo@n.co',
 //   'finance',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
@@ -172,7 +173,7 @@ app.get('/subscribed', async (req, res, next) => {
 // );
 // new Post(
 //   'How to earn money',
-//   '0_1.jpg',
+//   `0_${i}.jpg`,
 //   'ali@n.co',
 //   'marketing',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
@@ -180,7 +181,7 @@ app.get('/subscribed', async (req, res, next) => {
 // );
 // new Post(
 //   'How to earn money',
-//   '0_2.jpg',
+//   `0_${i}.jpg`,
 //   'mo@n.co',
 //   'programming',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
@@ -188,7 +189,7 @@ app.get('/subscribed', async (req, res, next) => {
 // );
 // new Post(
 //   'How to earn money',
-//   '0_3.jpg',
+//   `0_${i}.jpg`,
 //   'bob@n.co',
 //   'designing',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
@@ -196,12 +197,13 @@ app.get('/subscribed', async (req, res, next) => {
 // );
 // new Post(
 //   'How to earn money',
-//   '0_4.jpg',
+//   `0_${i}.jpg`,
 //   'hassan@n.co',
 //   'crypto',
 //   'Welcome to itwoc we aim to provide new learners an easy way to learn art of finance',
 //   new Date(),
 // );
+// }
 
 sqlite3Database.serialize(() => {
   // sqlite3Database.exec(`
